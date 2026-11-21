@@ -565,14 +565,20 @@ ui_rate() {
 # ui_read_key [TIMEOUT]   -> REPLY: a key name, or the character typed.
 # Names: enter esc tab backtab space backspace delete insert up down left
 # right home end pgup pgdn f1..f12 ctrl-a .. ctrl-z, alt-<char>.
-# Returns 1 on timeout / end of input (REPLY is then empty).
+# Returns 1 on timeout and 2 at end of input (REPLY is then empty).
 ui_read_key() {
-	local timeout=${1:-} k='' seq='' c=''
+	local timeout=${1:-} k='' seq='' c='' rc=0
 	REPLY=''
 	if [[ -n $timeout ]]; then
-		IFS= read -rsN1 -t "$timeout" -u "$UI_IN_FD" k 2>/dev/null || return 1
+		IFS= read -rsN1 -t "$timeout" -u "$UI_IN_FD" k 2>/dev/null || rc=$?
 	else
-		IFS= read -rsN1 -u "$UI_IN_FD" k 2>/dev/null || return 1
+		IFS= read -rsN1 -u "$UI_IN_FD" k 2>/dev/null || rc=$?
+	fi
+	if ((rc != 0)); then
+		# A timeout (or an interrupting signal such as SIGWINCH) reports a
+		# status above 128; anything else means the input is gone.
+		if ((rc > 128)); then return 1; fi
+		return 2
 	fi
 	case $k in
 		$'\e')

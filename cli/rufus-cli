@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# rufus-cli - create bootable USB drives from the Linux command line.
+# A port of Rufus (https://rufus.ie) for Debian/Ubuntu and RHEL-family systems.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Keep everything up to the version check understandable by ancient shells.
+if [ -z "${BASH_VERSION:-}" ]; then
+	echo "rufus-cli: this program must be run with bash" >&2
+	exit 1
+fi
+if [ "${BASH_VERSINFO[0]}" -lt 4 ] || { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -lt 4 ]; }; then
+	echo "rufus-cli: bash 4.4 or newer is required (this is bash $BASH_VERSION)" >&2
+	exit 1
+fi
+
+set -u
+
+# Locate ourselves, following symlinks (the installed command is one).
+RC_SELF=$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null) || RC_SELF=${BASH_SOURCE[0]}
+RC_ROOT=${RC_SELF%/*}
+[[ -d $RC_ROOT/lib ]] || {
+	echo "rufus-cli: cannot find my library directory next to $RC_SELF" >&2
+	exit 1
+}
+export RC_SELF RC_ROOT
+
+# shellcheck source=lib/core.sh
+. "$RC_ROOT/lib/core.sh"
+# shellcheck source=lib/i18n.sh
+. "$RC_ROOT/lib/i18n.sh"
+# shellcheck source=lib/ui.sh
+. "$RC_ROOT/lib/ui.sh"
+# shellcheck source=lib/widgets.sh
+. "$RC_ROOT/lib/widgets.sh"
+# shellcheck source=lib/progress.sh
+. "$RC_ROOT/lib/progress.sh"
+# shellcheck source=lib/deps.sh
+. "$RC_ROOT/lib/deps.sh"
+# shellcheck source=lib/device.sh
+. "$RC_ROOT/lib/device.sh"
+# shellcheck source=lib/layout.sh
+. "$RC_ROOT/lib/layout.sh"
+# shellcheck source=lib/format.sh
+. "$RC_ROOT/lib/format.sh"
+# shellcheck source=lib/bootrec.sh
+. "$RC_ROOT/lib/bootrec.sh"
+# shellcheck source=lib/image.sh
+. "$RC_ROOT/lib/image.sh"
+# shellcheck source=lib/copy.sh
+. "$RC_ROOT/lib/copy.sh"
+# shellcheck source=lib/windows.sh
+. "$RC_ROOT/lib/windows.sh"
+# shellcheck source=lib/freedos.sh
+. "$RC_ROOT/lib/freedos.sh"
+# shellcheck source=lib/extras.sh
+. "$RC_ROOT/lib/extras.sh"
+# shellcheck source=lib/ddwrite.sh
+. "$RC_ROOT/lib/ddwrite.sh"
+# shellcheck source=lib/plan.sh
+. "$RC_ROOT/lib/plan.sh"
+# shellcheck source=lib/pipeline.sh
+. "$RC_ROOT/lib/pipeline.sh"
+# shellcheck source=lib/cli.sh
+. "$RC_ROOT/lib/cli.sh"
+# shellcheck source=lib/tui.sh
+. "$RC_ROOT/lib/tui.sh"
+
+core_fix_path
+core_detect_invoker
+cli_main "$@"
+exit $?

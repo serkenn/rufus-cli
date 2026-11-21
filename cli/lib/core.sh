@@ -420,6 +420,17 @@ core_path_has_mounts() {
 	return 1
 }
 
+# core_is_mountpoint DIR   true when a file system is mounted exactly at DIR.
+core_is_mountpoint() {
+	local dir=$1 _a _b _c _d mnt rest
+	[[ -r /proc/self/mountinfo ]] || return 1
+	while read -r _a _b _c _d mnt rest; do
+		mnt=${mnt//\\040/ }
+		[[ $mnt == "$dir" ]] && return 0
+	done </proc/self/mountinfo
+	return 1
+}
+
 # Remove the private temp dir - but never while something is still mounted
 # inside it: a recursive delete would then wipe the freshly written media.
 core_remove_tmp() {
