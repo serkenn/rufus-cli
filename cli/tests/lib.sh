@@ -152,7 +152,10 @@ t_false() {
 
 # t_file_eq FILE_A FILE_B [LABEL]
 t_file_eq() {
-	if cmp -s -- "$1" "$2"; then
+	local _a _b
+	_a=$(sha256sum <"$1" 2>/dev/null) || _a="unreadable:$1"
+	_b=$(sha256sum <"$2" 2>/dev/null) || _b="unreadable:$2"
+	if [[ $_a == "$_b" ]]; then
 		_t_pass
 	else
 		_t_fail "${3:+$3}" "files differ: $1 $2"

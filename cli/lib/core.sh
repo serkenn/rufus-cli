@@ -573,6 +573,45 @@ file_size() {
 	REPLY=$n
 }
 
+# files_equal A B   true when both files have the same content.
+# (diffutils - and with it cmp - is not part of minimal RHEL-family installs.)
+files_equal() {
+	local a b
+	if have cmp; then
+		cmp -s -- "$1" "$2"
+		return
+	fi
+	a=$(sha256sum <"$1" 2>/dev/null) || return 2
+	b=$(sha256sum <"$2" 2>/dev/null) || return 2
+	[[ $a == "$b" ]]
+}
+
+# range_sha256 FILE OFFSET COUNT   -> REPLY: SHA-256 of COUNT bytes at OFFSET.
+# Works on regular files and block devices; reads in large blocks whenever the
+# range allows it.
+range_sha256() {
+	local file=$1 off=$2 count=$3 out bs=1
+	if ((off % 1048576 == 0 && count % 1048576 == 0)); then
+		bs=1048576
+	elif ((off % 4096 == 0 && count % 4096 == 0)); then
+		bs=4096
+	elif ((off % 512 == 0 && count % 512 == 0)); then
+		bs=512
+	fi
+	out=$(dd if="$file" bs="$bs" skip=$((off / bs)) count=$((count / bs)) 2>/dev/null | sha256sum) || return 1
+	REPLY=${out%% *}
+	[[ ${#REPLY} -eq 64 ]]
+}
+
+# range_equal FILE_A OFFSET_A FILE_B OFFSET_B COUNT   compare two byte ranges.
+range_equal() {
+	local a
+	range_sha256 "$1" "$2" "$5" || return 2
+	a=$REPLY
+	range_sha256 "$3" "$4" "$5" || return 2
+	[[ $a == "$REPLY" ]]
+}
+
 # read_u8/le16/le32/le64 FILE OFFSET   read a little-endian integer -> REPLY
 _rc_read_le() {
 	local file=$1 off=$2 n=$3 bytes b val=0 i=0

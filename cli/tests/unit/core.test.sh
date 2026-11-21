@@ -70,6 +70,21 @@ read_hex "$bin" 0 4; t_eq "$REPLY" "01020304"
 t_false read_le32 "$bin" 8
 file_size "$bin";   t_eq "$REPLY" 10
 
+t_case "content comparison without diffutils"
+printf 'abcdefghij' >"$bin.a"
+printf 'abcdefghij' >"$bin.b"
+printf 'abcdefghiX' >"$bin.c"
+t_true files_equal "$bin.a" "$bin.b"
+t_false files_equal "$bin.a" "$bin.c"
+t_true range_equal "$bin.a" 0 "$bin.c" 0 9
+t_false range_equal "$bin.a" 0 "$bin.c" 0 10
+t_true range_equal "$bin.a" 2 "$bin.b" 2 5
+range_sha256 "$bin.a" 0 10
+t_eq "$REPLY" "72399361da6a7754fec986dca5b7cbaf1c810a28ded4abaf56b2106d06cb78b0"
+head -c 2097152 /dev/zero >"$bin.z"
+range_sha256 "$bin.z" 1048576 1048576
+t_eq "$REPLY" "30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58" "1 MiB of zeros, block-aligned path"
+
 # --- logging and errors -----------------------------------------------------
 
 t_case "fail records the message"
