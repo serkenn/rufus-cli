@@ -243,6 +243,42 @@ run_retry() {
 	return 1
 }
 
+# core_kill_tree PID [SIGNAL]   signal a process and all of its descendants.
+# The tree is collected first and signalled parent-first, so that a shell loop
+# cannot start a new child after its previous one was killed.
+core_kill_tree() {
+	local sig=${2:-TERM} p
+	local -a _rc_tree=()
+	_core_collect_tree "$1"
+	for p in "${_rc_tree[@]}"; do
+		kill -s "$sig" "$p" 2>/dev/null || true
+	done
+	return 0
+}
+
+_core_collect_tree() {
+	local pid=$1 child f stat
+	local -a kids=() fields=()
+	_rc_tree+=("$pid")
+	if [[ -r /proc/$pid/task/$pid/children ]]; then
+		read -r -a kids <"/proc/$pid/task/$pid/children" 2>/dev/null || true
+	else
+		# Kernels without CONFIG_PROC_CHILDREN: look for our pid in the
+		# parent field of every process ("pid (comm) state ppid ...").
+		for f in /proc/[0-9]*/stat; do
+			{ IFS= read -r stat <"$f"; } 2>/dev/null || continue
+			read -r -a fields <<<"${stat##*) }"
+			if [[ ${fields[1]:-} == "$pid" ]]; then
+				f=${f#/proc/}
+				kids+=("${f%/stat}")
+			fi
+		done
+	fi
+	for child in "${kids[@]}"; do
+		_core_collect_tree "$child"
+	done
+}
+
 # ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------

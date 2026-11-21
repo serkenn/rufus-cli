@@ -43,14 +43,13 @@ jobs:
           find cli rufus-cli.sh -type f \( -name '*.sh' -o -name 'rufus-cli' \) -print0 2>/dev/null |
             xargs -0 -r shellcheck -x -S warning -e SC2034
 
-  probe:
-    name: Probe ${{ matrix.image }}
+  unit:
+    name: Unit ${{ matrix.image }}
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         image:
-          - 'debian:11'
           - 'debian:12'
           - 'debian:13'
           - 'ubuntu:20.04'
@@ -64,23 +63,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Host facts
+      - name: Unit tests
         run: |
-          uname -a
-          lsblk -o NAME,TYPE,SIZE,TRAN,RM,HOTPLUG,MODEL,MOUNTPOINT || true
-          ls -la /dev/kvm || true
-          docker --version
-          sudo modprobe loop || true
-          sudo modprobe udf || true
-
-      - name: Probe
-        run: |
-          docker run --rm --privileged -v /dev:/dev -v "$PWD:/repo:ro" "${{ matrix.image }}" \
-            bash /repo/cli/tests/ci/probe.sh 2>&1 | tee probe.txt
-
-      - name: Upload result
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: probe-${{ strategy.job-index }}
-          path: probe.txt
+          docker run --rm -v "$PWD:/repo:ro" "${{ matrix.image }}" \
+            bash /repo/cli/tests/run.sh unit
