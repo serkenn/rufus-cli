@@ -1,0 +1,86 @@
+name: rufus-cli
+run-name: rufus-cli (Linux) checks
+
+on:
+  push:
+    paths:
+      - 'cli/**'
+      - 'rufus-cli.sh'
+      - '.github/workflows/cli.yml'
+  pull_request:
+    paths:
+      - 'cli/**'
+      - 'rufus-cli.sh'
+      - '.github/workflows/cli.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rufus-cli-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Syntax check
+        run: |
+          rc=0
+          while IFS= read -r -d '' f; do
+            bash -n "$f" || rc=1
+          done < <(find cli rufus-cli.sh -type f \( -name '*.sh' -o -name 'rufus-cli' \) -print0 2>/dev/null)
+          exit $rc
+
+      - name: ShellCheck
+        run: |
+          shellcheck --version
+          find cli rufus-cli.sh -type f \( -name '*.sh' -o -name 'rufus-cli' \) -print0 2>/dev/null |
+            xargs -0 -r shellcheck -x -S warning -e SC2034
+
+  probe:
+    name: Probe ${{ matrix.image }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - 'debian:11'
+          - 'debian:12'
+          - 'debian:13'
+          - 'ubuntu:20.04'
+          - 'ubuntu:22.04'
+          - 'ubuntu:24.04'
+          - 'ubuntu:26.04'
+          - 'almalinux:8'
+          - 'almalinux:9'
+          - 'almalinux:10'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Host facts
+        run: |
+          uname -a
+          lsblk -o NAME,TYPE,SIZE,TRAN,RM,HOTPLUG,MODEL,MOUNTPOINT || true
+          ls -la /dev/kvm || true
+          docker --version
+          sudo modprobe loop || true
+          sudo modprobe udf || true
+
+      - name: Probe
+        run: |
+          docker run --rm --privileged -v /dev:/dev -v "$PWD:/repo:ro" "${{ matrix.image }}" \
+            bash /repo/cli/tests/ci/probe.sh 2>&1 | tee probe.txt
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: probe-${{ strategy.job-index }}
+          path: probe.txt
