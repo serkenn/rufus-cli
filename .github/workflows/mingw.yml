@@ -13,6 +13,8 @@ on:
       - '**.sh'
       - '**.txt'
       - '**.xml'
+      - 'cli/**'
+      - '.github/workflows/cli.yml'
   pull_request:
     branches: [master]
     paths-ignore:
@@ -25,6 +27,8 @@ on:
       - '**.sh'
       - '**.txt'
       - '**.xml'
+      - 'cli/**'
+      - '.github/workflows/cli.yml'
 
 permissions:
   contents: read

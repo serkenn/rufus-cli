@@ -14,6 +14,8 @@ on:
       - '**.sh'
       - '**.txt'
       - '**.xml'
+      - 'cli/**'
+      - '.github/workflows/cli.yml'
 
 permissions:
   contents: read

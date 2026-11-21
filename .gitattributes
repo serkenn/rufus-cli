@@ -21,3 +21,9 @@ install-sh      eol=lf
 .github         export-ignore
 *.creole        export-ignore
 
+
+# rufus-cli (Linux): shipped in source archives, always LF
+/rufus-cli.sh   -export-ignore
+/cli/**         -export-ignore text=auto eol=lf
+/cli/**/*.bin   binary
+/cli/**/*.img   binary
